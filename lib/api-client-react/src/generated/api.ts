@@ -26,6 +26,7 @@ import type {
   ListMessagesParams,
   ListUsersParams,
   MarkReadResponse,
+  MeProfile,
   Message,
   NotFoundResponse,
   PresenceSnapshot,
@@ -972,6 +973,232 @@ export const useSendDirectMessage = <
 > => {
   return useMutation(getSendDirectMessageMutationOptions(options));
 };
+
+/**
+ * Upserts the user's profile in the local database and records a login event
+ * @summary Record a login event for the current user
+ */
+export const getRecordLoginUrl = () => {
+  return `/api/me/login`;
+};
+
+export const recordLogin = async (
+  options?: RequestInit,
+): Promise<MeProfile> => {
+  return customFetch<MeProfile>(getRecordLoginUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getRecordLoginMutationOptions = <
+  TError = ErrorType<UnauthorizedResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof recordLogin>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof recordLogin>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["recordLogin"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof recordLogin>>,
+    void
+  > = () => {
+    return recordLogin(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RecordLoginMutationResult = NonNullable<
+  Awaited<ReturnType<typeof recordLogin>>
+>;
+
+export type RecordLoginMutationError = ErrorType<UnauthorizedResponse>;
+
+/**
+ * @summary Record a login event for the current user
+ */
+export const useRecordLogin = <
+  TError = ErrorType<UnauthorizedResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof recordLogin>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof recordLogin>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(getRecordLoginMutationOptions(options));
+};
+
+/**
+ * @summary Record a logout event for the current user
+ */
+export const getRecordLogoutUrl = () => {
+  return `/api/me/logout`;
+};
+
+export const recordLogout = async (
+  options?: RequestInit,
+): Promise<MeProfile> => {
+  return customFetch<MeProfile>(getRecordLogoutUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getRecordLogoutMutationOptions = <
+  TError = ErrorType<UnauthorizedResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof recordLogout>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof recordLogout>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["recordLogout"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof recordLogout>>,
+    void
+  > = () => {
+    return recordLogout(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RecordLogoutMutationResult = NonNullable<
+  Awaited<ReturnType<typeof recordLogout>>
+>;
+
+export type RecordLogoutMutationError = ErrorType<UnauthorizedResponse>;
+
+/**
+ * @summary Record a logout event for the current user
+ */
+export const useRecordLogout = <
+  TError = ErrorType<UnauthorizedResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof recordLogout>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof recordLogout>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(getRecordLogoutMutationOptions(options));
+};
+
+/**
+ * @summary Get the current user's saved profile
+ */
+export const getGetMeUrl = () => {
+  return `/api/me`;
+};
+
+export const getMe = async (options?: RequestInit): Promise<MeProfile> => {
+  return customFetch<MeProfile>(getGetMeUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetMeQueryKey = () => {
+  return [`/api/me`] as const;
+};
+
+export const getGetMeQueryOptions = <
+  TData = Awaited<ReturnType<typeof getMe>>,
+  TError = ErrorType<UnauthorizedResponse>,
+>(options?: {
+  query?: UseQueryOptions<Awaited<ReturnType<typeof getMe>>, TError, TData>;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetMeQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getMe>>> = ({
+    signal,
+  }) => getMe({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getMe>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetMeQueryResult = NonNullable<Awaited<ReturnType<typeof getMe>>>;
+export type GetMeQueryError = ErrorType<UnauthorizedResponse>;
+
+/**
+ * @summary Get the current user's saved profile
+ */
+
+export function useGetMe<
+  TData = Awaited<ReturnType<typeof getMe>>,
+  TError = ErrorType<UnauthorizedResponse>,
+>(options?: {
+  query?: UseQueryOptions<Awaited<ReturnType<typeof getMe>>, TError, TData>;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetMeQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary Mark all messages from this user as read

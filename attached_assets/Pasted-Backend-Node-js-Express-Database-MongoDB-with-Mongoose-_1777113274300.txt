@@ -1,0 +1,199 @@
+Backend: Node.js + Express
+Database: MongoDB (with Mongoose)
+Real-time: Socket.io
+Auth: JWT
+Uploads: Multer
+Frontend: HTML + JS (you can later upgrade)
+📦 2. INSTALL PACKAGES
+Bash
+npm install express mongoose socket.io jsonwebtoken bcryptjs multer cors
+🗄️ 3. DATABASE SETUP (MongoDB)
+models/User.js
+JavaScript
+const mongoose = require("mongoose");
+
+const UserSchema = new mongoose.Schema({
+  username: String,
+  password: String,
+  avatar: String,
+  online: { type: Boolean, default: false }
+});
+
+module.exports = mongoose.model("User", UserSchema);
+models/Message.js
+JavaScript
+const mongoose = require("mongoose");
+
+const MessageSchema = new mongoose.Schema({
+  sender: String,
+  receiver: String,
+  content: String,
+  file: String,
+  timestamp: { type: Date, default: Date.now }
+});
+
+module.exports = mongoose.model("Message", MessageSchema);
+🔐 4. AUTH (SECURE LOGIN WITH JWT)
+auth.js
+JavaScript
+const jwt = require("jsonwebtoken");
+
+module.exports = (req, res, next) => {
+  const token = req.headers["authorization"];
+  if (!token) return res.sendStatus(403);
+
+  try {
+    const decoded = jwt.verify(token, "secretkey");
+    req.user = decoded;
+    next();
+  } catch {
+    res.sendStatus(401);
+  }
+};
+🚀 5. MAIN SERVER
+server.js
+JavaScript
+const express = require("express");
+const mongoose = require("mongoose");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const http = require("http");
+const { Server } = require("socket.io");
+const multer = require("multer");
+const cors = require("cors");
+
+const User = require("./models/User");
+const Message = require("./models/Message");
+const auth = require("./auth");
+
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server, { cors: { origin: "*" } });
+
+app.use(express.json());
+app.use(cors());
+app.use("/uploads", express.static("uploads"));
+
+mongoose.connect("YOUR_MONGODB_URI");
+
+// FILE UPLOAD
+const storage = multer.diskStorage({
+  destination: "uploads/",
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + "-" + file.originalname);
+  }
+});
+const upload = multer({ storage });
+
+// SIGNUP
+app.post("/signup", async (req, res) => {
+  const hashed = await bcrypt.hash(req.body.password, 10);
+  const user = new User({ username: req.body.username, password: hashed });
+  await user.save();
+  res.send("User created");
+});
+
+// LOGIN
+app.post("/login", async (req, res) => {
+  const user = await User.findOne({ username: req.body.username });
+  if (!user) return res.send("No user");
+
+  const valid = await bcrypt.compare(req.body.password, user.password);
+  if (!valid) return res.send("Wrong password");
+
+  const token = jwt.sign({ id: user._id, username: user.username }, "secretkey");
+  res.json({ token });
+});
+
+// UPLOAD FILE
+app.post("/upload", auth, upload.single("file"), (req, res) => {
+  res.json({ file: req.file.filename });
+});
+
+// GET USERS
+app.get("/users", auth, async (req, res) => {
+  const users = await User.find();
+  res.json(users);
+});
+
+// GET PRIVATE MESSAGES
+app.get("/messages/:user", auth, async (req, res) => {
+  const messages = await Message.find({
+    $or: [
+      { sender: req.user.username, receiver: req.params.user },
+      { sender: req.params.user, receiver: req.user.username }
+    ]
+  });
+  res.json(messages);
+});
+
+
+// SOCKET.IO (REAL-TIME)
+let onlineUsers = {};
+
+io.on("connection", (socket) => {
+
+  socket.on("join", (username) => {
+    onlineUsers[username] = socket.id;
+    io.emit("status", onlineUsers);
+  });
+
+  socket.on("private message", async (data) => {
+    const msg = new Message(data);
+    await msg.save();
+
+    const receiverSocket = onlineUsers[data.receiver];
+    if (receiverSocket) {
+      io.to(receiverSocket).emit("private message", data);
+    }
+  });
+
+  socket.on("disconnect", () => {
+    for (let user in onlineUsers) {
+      if (onlineUsers[user] === socket.id) {
+        delete onlineUsers[user];
+      }
+    }
+    io.emit("status", onlineUsers);
+  });
+});
+
+server.listen(3000, () => console.log("Server running"));
+🎨 6. FRONTEND (basic idea)
+Features to implement:
+Login → store JWT
+Fetch users list
+Click user → load chat
+Send message via Socket.io
+Upload files
+Example send:
+JavaScript
+socket.emit("private message", {
+  sender: currentUser,
+  receiver: selectedUser,
+  content: message
+});
+🔐 7. END-TO-END ENCRYPTION (IMPORTANT)
+Real WhatsApp uses advanced encryption.
+You cannot fake this easily, but basic idea:
+Generate keys per user
+Encrypt message before sending
+Decrypt on receiver side
+Simple example:
+JavaScript
+const crypto = require("crypto");
+
+function encrypt(text, key) {
+  const cipher = crypto.createCipher("aes-256-cbc", key);
+  return cipher.update(text, "utf8", "hex") + cipher.final("hex");
+}
+⚠️ This is NOT production-secure — just learning level.
+🌍 8. DEPLOY IT LIVE
+Use:
+Replit (easiest)
+Render
+Railway
+Steps:
+Push code
+Add environment variables (Mongo URI, JWT secret)
+Deploy

@@ -16,6 +16,7 @@ export * from "./healthStatus";
 export * from "./listMessagesParams";
 export * from "./listUsersParams";
 export * from "./markReadResponse";
+export * from "./meProfile";
 export * from "./message";
 export * from "./notFoundResponse";
 export * from "./presenceMember";

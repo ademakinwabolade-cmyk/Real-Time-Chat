@@ -1,12 +1,14 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useRef } from "react";
 import { Link, useLocation, Redirect } from "wouter";
-import { Show, useClerk, useUser } from "@clerk/react";
+import { Show, useAuth, useClerk, useUser } from "@clerk/react";
 import { MessageSquare, Inbox, LogOut } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   useGetUnreadDmCount,
   getGetUnreadDmCountQueryKey,
+  useRecordLogin,
+  useRecordLogout,
 } from "@workspace/api-client-react";
 import { useChatSocket } from "@/hooks/use-chat-socket";
 
@@ -50,6 +52,7 @@ export function AppShell({ children, active }: AppShellProps) {
   const [, setLocation] = useLocation();
   const { signOut } = useClerk();
   const { user } = useUser();
+  const { isSignedIn } = useAuth();
 
   useChatSocket();
 
@@ -60,7 +63,23 @@ export function AppShell({ children, active }: AppShellProps) {
     },
   });
 
+  const recordLogin = useRecordLogin();
+  const recordLogout = useRecordLogout();
+
+  const loggedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (isSignedIn && user?.id && loggedRef.current !== user.id) {
+      loggedRef.current = user.id;
+      recordLogin.mutate();
+    }
+  }, [isSignedIn, user?.id, recordLogin]);
+
   const handleSignOut = async () => {
+    try {
+      await recordLogout.mutateAsync();
+    } catch {
+      // best effort — proceed with sign out regardless
+    }
     await signOut();
     setLocation("/");
   };

@@ -247,6 +247,49 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
+  /me/login:
+    post:
+      operationId: recordLogin
+      tags: [me]
+      summary: Record a login event for the current user
+      description: Upserts the user's profile in the local database and records a login event
+      responses:
+        "200":
+          description: Login recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeProfile"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /me/logout:
+    post:
+      operationId: recordLogout
+      tags: [me]
+      summary: Record a logout event for the current user
+      responses:
+        "200":
+          description: Logout recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeProfile"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /me:
+    get:
+      operationId: getMe
+      tags: [me]
+      summary: Get the current user's saved profile
+      responses:
+        "200":
+          description: Saved profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeProfile"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
   /dms/{userId}/read:
     post:
       operationId: markConversationRead
@@ -463,3 +506,38 @@ components:
           type: integer
       required:
         - marked
+    MeProfile:
+      type: object
+      properties:
+        id:
+          type: string
+        username:
+          type: string
+        email:
+          type: ["string", "null"]
+        avatarUrl:
+          type: ["string", "null"]
+        firstSeenAt:
+          type: string
+          format: date-time
+        lastSeenAt:
+          type: string
+          format: date-time
+        lastLoginAt:
+          type: ["string", "null"]
+          format: date-time
+        lastLogoutAt:
+          type: ["string", "null"]
+          format: date-time
+        loginCount:
+          type: integer
+      required:
+        - id
+        - username
+        - email
+        - avatarUrl
+        - firstSeenAt
+        - lastSeenAt
+        - lastLoginAt
+        - lastLogoutAt
+        - loginCount

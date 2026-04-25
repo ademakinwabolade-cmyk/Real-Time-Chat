@@ -187,6 +187,52 @@ export const SendDirectMessageBody = zod.object({
 });
 
 /**
+ * Upserts the user's profile in the local database and records a login event
+ * @summary Record a login event for the current user
+ */
+export const RecordLoginResponse = zod.object({
+  id: zod.string(),
+  username: zod.string(),
+  email: zod.string().nullable(),
+  avatarUrl: zod.string().nullable(),
+  firstSeenAt: zod.coerce.date(),
+  lastSeenAt: zod.coerce.date(),
+  lastLoginAt: zod.coerce.date().nullable(),
+  lastLogoutAt: zod.coerce.date().nullable(),
+  loginCount: zod.number(),
+});
+
+/**
+ * @summary Record a logout event for the current user
+ */
+export const RecordLogoutResponse = zod.object({
+  id: zod.string(),
+  username: zod.string(),
+  email: zod.string().nullable(),
+  avatarUrl: zod.string().nullable(),
+  firstSeenAt: zod.coerce.date(),
+  lastSeenAt: zod.coerce.date(),
+  lastLoginAt: zod.coerce.date().nullable(),
+  lastLogoutAt: zod.coerce.date().nullable(),
+  loginCount: zod.number(),
+});
+
+/**
+ * @summary Get the current user's saved profile
+ */
+export const GetMeResponse = zod.object({
+  id: zod.string(),
+  username: zod.string(),
+  email: zod.string().nullable(),
+  avatarUrl: zod.string().nullable(),
+  firstSeenAt: zod.coerce.date(),
+  lastSeenAt: zod.coerce.date(),
+  lastLoginAt: zod.coerce.date().nullable(),
+  lastLogoutAt: zod.coerce.date().nullable(),
+  loginCount: zod.number(),
+});
+
+/**
  * @summary Mark all messages from this user as read
  */
 export const MarkConversationReadParams = zod.object({

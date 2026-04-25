@@ -92,6 +92,22 @@ export interface MarkReadResponse {
   marked: number;
 }
 
+export interface MeProfile {
+  id: string;
+  username: string;
+  /** @nullable */
+  email: string | null;
+  /** @nullable */
+  avatarUrl: string | null;
+  firstSeenAt: string;
+  lastSeenAt: string;
+  /** @nullable */
+  lastLoginAt: string | null;
+  /** @nullable */
+  lastLogoutAt: string | null;
+  loginCount: number;
+}
+
 /**
  * Missing or invalid authentication
  */
