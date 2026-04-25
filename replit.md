@@ -11,10 +11,18 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **Package manager**: pnpm
 - **TypeScript version**: 5.9
 - **API framework**: Express 5
+- **Real-time**: Socket.IO (path `/socket.io`, served by api-server)
 - **Database**: PostgreSQL + Drizzle ORM
+- **Auth**: Clerk (Replit-managed)
 - **Validation**: Zod (`zod/v4`), `drizzle-zod`
 - **API codegen**: Orval (from OpenAPI spec)
 - **Build**: esbuild (CJS bundle)
+
+## Artifacts
+
+- `chatroom` (`react-vite`, `/`) — public real-time chat lounge with Clerk auth and Socket.IO
+- `api-server` (`api`, `/api`) — Express + Clerk + Socket.IO server, backs the chatroom
+- `mockup-sandbox` (`design`, `/__mockup`) — design mockup playground
 
 ## Key Commands
 

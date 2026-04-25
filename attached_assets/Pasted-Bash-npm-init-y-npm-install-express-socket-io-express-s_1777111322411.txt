@@ -1,0 +1,117 @@
+Bash
+npm init -y
+npm install express socket.io express-session body-parser
+🚀 Step 2: Backend (server.js)
+JavaScript
+const express = require("express");
+const http = require("http");
+const socketIo = require("socket.io");
+const session = require("express-session");
+const bodyParser = require("body-parser");
+
+const app = express();
+const server = http.createServer(app);
+const io = socketIo(server);
+
+app.use(express.static("public"));
+app.use(bodyParser.urlencoded({ extended: true }));
+
+app.use(session({
+  secret: "secret-key",
+  resave: false,
+  saveUninitialized: true
+}));
+
+// Fake user database
+const users = [];
+
+// Register
+app.post("/register", (req, res) => {
+  const { username, password } = req.body;
+  users.push({ username, password });
+  res.redirect("/");
+});
+
+// Login
+app.post("/login", (req, res) => {
+  const { username, password } = req.body;
+  const user = users.find(u => u.username === username && u.password === password);
+
+  if (user) {
+    req.session.user = username;
+    res.redirect("/chat.html");
+  } else {
+    res.send("Invalid login");
+  }
+});
+
+// Protect chat page
+app.get("/chat.html", (req, res, next) => {
+  if (!req.session.user) return res.redirect("/");
+  next();
+});
+
+// Socket chat
+io.on("connection", (socket) => {
+  console.log("User connected");
+
+  socket.on("chat message", (msg) => {
+    io.emit("chat message", msg);
+  });
+
+  socket.on("disconnect", () => {
+    console.log("User disconnected");
+  });
+});
+
+server.listen(3000, () => {
+  console.log("Server running on port 3000");
+});
+🌐 Step 3: Frontend (public/index.html)
+HTML
+<h2>Login</h2>
+<form action="/login" method="POST">
+  <input name="username" placeholder="Username" required>
+  <input name="password" type="password" placeholder="Password" required>
+  <button>Login</button>
+</form>
+
+<h2>Register</h2>
+<form action="/register" method="POST">
+  <input name="username" required>
+  <input name="password" type="password" required>
+  <button>Register</button>
+</form>
+💬 Step 4: Chat Page (public/chat.html)
+HTML
+<h2>Chat Room</h2>
+<ul id="messages"></ul>
+
+<form id="form">
+  <input id="input" autocomplete="off">
+  <button>Send</button>
+</form>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="script.js"></script>
+📜 Step 5: Chat Script (public/script.js)
+JavaScript
+const socket = io();
+
+const form = document.getElementById("form");
+const input = document.getElementById("input");
+const messages = document.getElementById("messages");
+
+form.addEventListener("submit", function(e) {
+  e.preventDefault();
+  if (input.value) {
+    socket.emit("chat message", input.value);
+    input.value = "";
+  }
+});
+
+socket.on("chat message", function(msg) {
+  const li = document.createElement("li");
+  li.textContent = msg;
+  messages.appendChild(li);
+});

@@ -14,3 +14,71 @@ import * as zod from "zod";
 export const HealthCheckResponse = zod.object({
   status: zod.string(),
 });
+
+/**
+ * Returns the most recent chat messages in chronological order (oldest first)
+ * @summary List recent messages
+ */
+export const listMessagesQueryLimitDefault = 100;
+export const listMessagesQueryLimitMax = 200;
+
+export const ListMessagesQueryParams = zod.object({
+  limit: zod.coerce
+    .number()
+    .min(1)
+    .max(listMessagesQueryLimitMax)
+    .default(listMessagesQueryLimitDefault),
+});
+
+export const ListMessagesResponseItem = zod.object({
+  id: zod.number(),
+  userId: zod.string(),
+  username: zod.string(),
+  avatarUrl: zod.string().nullable(),
+  body: zod.string(),
+  createdAt: zod.coerce.date(),
+});
+export const ListMessagesResponse = zod.array(ListMessagesResponseItem);
+
+/**
+ * Persists a new chat message and broadcasts it to connected clients
+ * @summary Send a chat message
+ */
+export const createMessageBodyBodyMax = 2000;
+
+export const CreateMessageBody = zod.object({
+  body: zod.string().min(1).max(createMessageBodyBodyMax),
+});
+
+/**
+ * Aggregate stats — total messages, active members today, top contributors in the last 24 hours
+ * @summary Lounge activity overview
+ */
+export const GetChatStatsResponse = zod.object({
+  totalMessages: zod.number(),
+  messagesToday: zod.number(),
+  activeMembersToday: zod.number(),
+  topContributors: zod.array(
+    zod.object({
+      userId: zod.string(),
+      username: zod.string(),
+      avatarUrl: zod.string().nullable(),
+      messageCount: zod.number(),
+    }),
+  ),
+});
+
+/**
+ * Lightweight snapshot of who is connected right now
+ * @summary Currently online members
+ */
+export const GetPresenceResponse = zod.object({
+  onlineCount: zod.number(),
+  members: zod.array(
+    zod.object({
+      userId: zod.string(),
+      username: zod.string(),
+      avatarUrl: zod.string().nullable(),
+    }),
+  ),
+});

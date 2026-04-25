@@ -10,6 +10,10 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: messages
+    description: Chat messages
+  - name: presence
+    description: Presence and activity
 paths:
   /healthz:
     get:
@@ -24,7 +28,98 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /messages:
+    get:
+      operationId: listMessages
+      tags: [messages]
+      summary: List recent messages
+      description: Returns the most recent chat messages in chronological order (oldest first)
+      parameters:
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 100
+      responses:
+        "200":
+          description: List of messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Message"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      operationId: createMessage
+      tags: [messages]
+      summary: Send a chat message
+      description: Persists a new chat message and broadcasts it to connected clients
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMessageInput"
+      responses:
+        "201":
+          description: Message created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /messages/stats:
+    get:
+      operationId: getChatStats
+      tags: [messages]
+      summary: Lounge activity overview
+      description: Aggregate stats — total messages, active members today, top contributors in the last 24 hours
+      responses:
+        "200":
+          description: Activity summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatStats"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /presence:
+    get:
+      operationId: getPresence
+      tags: [presence]
+      summary: Currently online members
+      description: Lightweight snapshot of who is connected right now
+      responses:
+        "200":
+          description: Online members snapshot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PresenceSnapshot"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 components:
+  responses:
+    Unauthorized:
+      description: Missing or invalid authentication
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
   schemas:
     HealthStatus:
       type: object
@@ -33,4 +128,101 @@ components:
           type: string
       required:
         - status
-
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+    Message:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: string
+        username:
+          type: string
+        avatarUrl:
+          type: ["string", "null"]
+        body:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - username
+        - avatarUrl
+        - body
+        - createdAt
+    CreateMessageInput:
+      type: object
+      properties:
+        body:
+          type: string
+          minLength: 1
+          maxLength: 2000
+      required:
+        - body
+    TopContributor:
+      type: object
+      properties:
+        userId:
+          type: string
+        username:
+          type: string
+        avatarUrl:
+          type: ["string", "null"]
+        messageCount:
+          type: integer
+      required:
+        - userId
+        - username
+        - avatarUrl
+        - messageCount
+    ChatStats:
+      type: object
+      properties:
+        totalMessages:
+          type: integer
+        messagesToday:
+          type: integer
+        activeMembersToday:
+          type: integer
+        topContributors:
+          type: array
+          items:
+            $ref: "#/components/schemas/TopContributor"
+      required:
+        - totalMessages
+        - messagesToday
+        - activeMembersToday
+        - topContributors
+    PresenceMember:
+      type: object
+      properties:
+        userId:
+          type: string
+        username:
+          type: string
+        avatarUrl:
+          type: ["string", "null"]
+      required:
+        - userId
+        - username
+        - avatarUrl
+    PresenceSnapshot:
+      type: object
+      properties:
+        onlineCount:
+          type: integer
+        members:
+          type: array
+          items:
+            $ref: "#/components/schemas/PresenceMember"
+      required:
+        - onlineCount
+        - members

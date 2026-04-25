@@ -5,18 +5,30 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
+  MutationFunction,
   QueryFunction,
   QueryKey,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult,
 } from "@tanstack/react-query";
 
-import type { HealthStatus } from "./api.schemas";
+import type {
+  BadRequestResponse,
+  ChatStats,
+  CreateMessageInput,
+  HealthStatus,
+  ListMessagesParams,
+  Message,
+  PresenceSnapshot,
+  UnauthorizedResponse,
+} from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
-import type { ErrorType } from "../custom-fetch";
+import type { ErrorType, BodyType } from "../custom-fetch";
 
 type AwaitedInput<T> = PromiseLike<T> | T;
 
@@ -92,6 +104,342 @@ export function useHealthCheck<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getHealthCheckQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Returns the most recent chat messages in chronological order (oldest first)
+ * @summary List recent messages
+ */
+export const getListMessagesUrl = (params?: ListMessagesParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/messages?${stringifiedParams}`
+    : `/api/messages`;
+};
+
+export const listMessages = async (
+  params?: ListMessagesParams,
+  options?: RequestInit,
+): Promise<Message[]> => {
+  return customFetch<Message[]>(getListMessagesUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListMessagesQueryKey = (params?: ListMessagesParams) => {
+  return [`/api/messages`, ...(params ? [params] : [])] as const;
+};
+
+export const getListMessagesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listMessages>>,
+  TError = ErrorType<UnauthorizedResponse>,
+>(
+  params?: ListMessagesParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listMessages>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListMessagesQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listMessages>>> = ({
+    signal,
+  }) => listMessages(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listMessages>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListMessagesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listMessages>>
+>;
+export type ListMessagesQueryError = ErrorType<UnauthorizedResponse>;
+
+/**
+ * @summary List recent messages
+ */
+
+export function useListMessages<
+  TData = Awaited<ReturnType<typeof listMessages>>,
+  TError = ErrorType<UnauthorizedResponse>,
+>(
+  params?: ListMessagesParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listMessages>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListMessagesQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Persists a new chat message and broadcasts it to connected clients
+ * @summary Send a chat message
+ */
+export const getCreateMessageUrl = () => {
+  return `/api/messages`;
+};
+
+export const createMessage = async (
+  createMessageInput: CreateMessageInput,
+  options?: RequestInit,
+): Promise<Message> => {
+  return customFetch<Message>(getCreateMessageUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createMessageInput),
+  });
+};
+
+export const getCreateMessageMutationOptions = <
+  TError = ErrorType<BadRequestResponse | UnauthorizedResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createMessage>>,
+    TError,
+    { data: BodyType<CreateMessageInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createMessage>>,
+  TError,
+  { data: BodyType<CreateMessageInput> },
+  TContext
+> => {
+  const mutationKey = ["createMessage"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createMessage>>,
+    { data: BodyType<CreateMessageInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createMessage(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateMessageMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createMessage>>
+>;
+export type CreateMessageMutationBody = BodyType<CreateMessageInput>;
+export type CreateMessageMutationError = ErrorType<
+  BadRequestResponse | UnauthorizedResponse
+>;
+
+/**
+ * @summary Send a chat message
+ */
+export const useCreateMessage = <
+  TError = ErrorType<BadRequestResponse | UnauthorizedResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createMessage>>,
+    TError,
+    { data: BodyType<CreateMessageInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createMessage>>,
+  TError,
+  { data: BodyType<CreateMessageInput> },
+  TContext
+> => {
+  return useMutation(getCreateMessageMutationOptions(options));
+};
+
+/**
+ * Aggregate stats — total messages, active members today, top contributors in the last 24 hours
+ * @summary Lounge activity overview
+ */
+export const getGetChatStatsUrl = () => {
+  return `/api/messages/stats`;
+};
+
+export const getChatStats = async (
+  options?: RequestInit,
+): Promise<ChatStats> => {
+  return customFetch<ChatStats>(getGetChatStatsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetChatStatsQueryKey = () => {
+  return [`/api/messages/stats`] as const;
+};
+
+export const getGetChatStatsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getChatStats>>,
+  TError = ErrorType<UnauthorizedResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getChatStats>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetChatStatsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getChatStats>>> = ({
+    signal,
+  }) => getChatStats({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getChatStats>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetChatStatsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getChatStats>>
+>;
+export type GetChatStatsQueryError = ErrorType<UnauthorizedResponse>;
+
+/**
+ * @summary Lounge activity overview
+ */
+
+export function useGetChatStats<
+  TData = Awaited<ReturnType<typeof getChatStats>>,
+  TError = ErrorType<UnauthorizedResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getChatStats>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetChatStatsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Lightweight snapshot of who is connected right now
+ * @summary Currently online members
+ */
+export const getGetPresenceUrl = () => {
+  return `/api/presence`;
+};
+
+export const getPresence = async (
+  options?: RequestInit,
+): Promise<PresenceSnapshot> => {
+  return customFetch<PresenceSnapshot>(getGetPresenceUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetPresenceQueryKey = () => {
+  return [`/api/presence`] as const;
+};
+
+export const getGetPresenceQueryOptions = <
+  TData = Awaited<ReturnType<typeof getPresence>>,
+  TError = ErrorType<UnauthorizedResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getPresence>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetPresenceQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getPresence>>> = ({
+    signal,
+  }) => getPresence({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getPresence>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetPresenceQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getPresence>>
+>;
+export type GetPresenceQueryError = ErrorType<UnauthorizedResponse>;
+
+/**
+ * @summary Currently online members
+ */
+
+export function useGetPresence<
+  TData = Awaited<ReturnType<typeof getPresence>>,
+  TError = ErrorType<UnauthorizedResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getPresence>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetPresenceQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

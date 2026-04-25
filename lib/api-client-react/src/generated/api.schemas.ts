@@ -8,3 +8,70 @@
 export interface HealthStatus {
   status: string;
 }
+
+export interface ErrorResponse {
+  error: string;
+}
+
+export interface Message {
+  id: number;
+  userId: string;
+  username: string;
+  /** @nullable */
+  avatarUrl: string | null;
+  body: string;
+  createdAt: string;
+}
+
+export interface CreateMessageInput {
+  /**
+   * @minLength 1
+   * @maxLength 2000
+   */
+  body: string;
+}
+
+export interface TopContributor {
+  userId: string;
+  username: string;
+  /** @nullable */
+  avatarUrl: string | null;
+  messageCount: number;
+}
+
+export interface ChatStats {
+  totalMessages: number;
+  messagesToday: number;
+  activeMembersToday: number;
+  topContributors: TopContributor[];
+}
+
+export interface PresenceMember {
+  userId: string;
+  username: string;
+  /** @nullable */
+  avatarUrl: string | null;
+}
+
+export interface PresenceSnapshot {
+  onlineCount: number;
+  members: PresenceMember[];
+}
+
+/**
+ * Missing or invalid authentication
+ */
+export type UnauthorizedResponse = ErrorResponse;
+
+/**
+ * Invalid request
+ */
+export type BadRequestResponse = ErrorResponse;
+
+export type ListMessagesParams = {
+  /**
+   * @minimum 1
+   * @maximum 200
+   */
+  limit?: number;
+};
