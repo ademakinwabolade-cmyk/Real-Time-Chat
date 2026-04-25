@@ -11,9 +11,13 @@ tags:
   - name: health
     description: Health operations
   - name: messages
-    description: Chat messages
+    description: Public lounge messages
   - name: presence
     description: Presence and activity
+  - name: users
+    description: Discoverable members
+  - name: dms
+    description: Private direct messages
 paths:
   /healthz:
     get:
@@ -106,6 +110,163 @@ paths:
                 $ref: "#/components/schemas/PresenceSnapshot"
         "401":
           $ref: "#/components/responses/Unauthorized"
+  /users:
+    get:
+      operationId: listUsers
+      tags: [users]
+      summary: List discoverable members
+      description: Members the current user can start a private conversation with
+      parameters:
+        - in: query
+          name: search
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+      responses:
+        "200":
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserProfile"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /users/{userId}:
+    get:
+      operationId: getUserProfile
+      tags: [users]
+      summary: Get a member's profile
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /dms:
+    get:
+      operationId: listConversations
+      tags: [dms]
+      summary: List the current user's conversations
+      description: Returns one entry per conversation partner with the latest message and unread count
+      responses:
+        "200":
+          description: Conversations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Conversation"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /dms/unread:
+    get:
+      operationId: getUnreadDmCount
+      tags: [dms]
+      summary: Total unread direct messages across all conversations
+      responses:
+        "200":
+          description: Unread count
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnreadCount"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /dms/{userId}:
+    get:
+      operationId: listDirectMessages
+      tags: [dms]
+      summary: List messages exchanged with a specific user
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DirectMessage"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      operationId: sendDirectMessage
+      tags: [dms]
+      summary: Send a direct message to a specific user
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMessageInput"
+      responses:
+        "201":
+          description: Direct message sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DirectMessage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /dms/{userId}/read:
+    post:
+      operationId: markConversationRead
+      tags: [dms]
+      summary: Mark all messages from this user as read
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Marked as read
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarkReadResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 components:
   responses:
     Unauthorized:
@@ -116,6 +277,12 @@ components:
             $ref: "#/components/schemas/ErrorResponse"
     BadRequest:
       description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: Resource not found
       content:
         application/json:
           schema:
@@ -226,3 +393,73 @@ components:
       required:
         - onlineCount
         - members
+    UserProfile:
+      type: object
+      properties:
+        userId:
+          type: string
+        username:
+          type: string
+        avatarUrl:
+          type: ["string", "null"]
+      required:
+        - userId
+        - username
+        - avatarUrl
+    DirectMessage:
+      type: object
+      properties:
+        id:
+          type: integer
+        senderId:
+          type: string
+        recipientId:
+          type: string
+        senderUsername:
+          type: string
+        senderAvatarUrl:
+          type: ["string", "null"]
+        body:
+          type: string
+        readAt:
+          type: ["string", "null"]
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - senderId
+        - recipientId
+        - senderUsername
+        - senderAvatarUrl
+        - body
+        - readAt
+        - createdAt
+    Conversation:
+      type: object
+      properties:
+        partner:
+          $ref: "#/components/schemas/UserProfile"
+        lastMessage:
+          $ref: "#/components/schemas/DirectMessage"
+        unreadCount:
+          type: integer
+      required:
+        - partner
+        - lastMessage
+        - unreadCount
+    UnreadCount:
+      type: object
+      properties:
+        total:
+          type: integer
+      required:
+        - total
+    MarkReadResponse:
+      type: object
+      properties:
+        marked:
+          type: integer
+      required:
+        - marked

@@ -3,7 +3,7 @@ import { Server as IOServer } from "socket.io";
 import { clerkMiddleware, getAuth } from "@clerk/express";
 import app from "./app";
 import { logger } from "./lib/logger";
-import { setIO, broadcastPresence } from "./lib/realtime";
+import { setIO, broadcastPresence, userRoom } from "./lib/realtime";
 import {
   addConnection,
   removeConnection,
@@ -67,6 +67,8 @@ io.on("connection", (socket) => {
     socket.disconnect(true);
     return;
   }
+
+  socket.join(userRoom(member.userId));
 
   const { changed } = addConnection(member);
   if (changed) broadcastPresence();

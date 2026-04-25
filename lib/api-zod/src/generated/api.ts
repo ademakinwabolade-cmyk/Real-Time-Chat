@@ -82,3 +82,117 @@ export const GetPresenceResponse = zod.object({
     }),
   ),
 });
+
+/**
+ * Members the current user can start a private conversation with
+ * @summary List discoverable members
+ */
+export const listUsersQueryLimitDefault = 50;
+export const listUsersQueryLimitMax = 100;
+
+export const ListUsersQueryParams = zod.object({
+  search: zod.coerce.string().optional(),
+  limit: zod.coerce
+    .number()
+    .min(1)
+    .max(listUsersQueryLimitMax)
+    .default(listUsersQueryLimitDefault),
+});
+
+export const ListUsersResponseItem = zod.object({
+  userId: zod.string(),
+  username: zod.string(),
+  avatarUrl: zod.string().nullable(),
+});
+export const ListUsersResponse = zod.array(ListUsersResponseItem);
+
+/**
+ * @summary Get a member's profile
+ */
+export const GetUserProfileParams = zod.object({
+  userId: zod.coerce.string(),
+});
+
+export const GetUserProfileResponse = zod.object({
+  userId: zod.string(),
+  username: zod.string(),
+  avatarUrl: zod.string().nullable(),
+});
+
+/**
+ * Returns one entry per conversation partner with the latest message and unread count
+ * @summary List the current user's conversations
+ */
+export const ListConversationsResponseItem = zod.object({
+  partner: zod.object({
+    userId: zod.string(),
+    username: zod.string(),
+    avatarUrl: zod.string().nullable(),
+  }),
+  lastMessage: zod.object({
+    id: zod.number(),
+    senderId: zod.string(),
+    recipientId: zod.string(),
+    senderUsername: zod.string(),
+    senderAvatarUrl: zod.string().nullable(),
+    body: zod.string(),
+    readAt: zod.coerce.date().nullable(),
+    createdAt: zod.coerce.date(),
+  }),
+  unreadCount: zod.number(),
+});
+export const ListConversationsResponse = zod.array(
+  ListConversationsResponseItem,
+);
+
+/**
+ * @summary Total unread direct messages across all conversations
+ */
+export const GetUnreadDmCountResponse = zod.object({
+  total: zod.number(),
+});
+
+/**
+ * @summary List messages exchanged with a specific user
+ */
+export const ListDirectMessagesParams = zod.object({
+  userId: zod.coerce.string(),
+});
+
+export const ListDirectMessagesResponseItem = zod.object({
+  id: zod.number(),
+  senderId: zod.string(),
+  recipientId: zod.string(),
+  senderUsername: zod.string(),
+  senderAvatarUrl: zod.string().nullable(),
+  body: zod.string(),
+  readAt: zod.coerce.date().nullable(),
+  createdAt: zod.coerce.date(),
+});
+export const ListDirectMessagesResponse = zod.array(
+  ListDirectMessagesResponseItem,
+);
+
+/**
+ * @summary Send a direct message to a specific user
+ */
+export const SendDirectMessageParams = zod.object({
+  userId: zod.coerce.string(),
+});
+
+export const sendDirectMessageBodyBodyMax = 2000;
+
+export const SendDirectMessageBody = zod.object({
+  body: zod.string().min(1).max(sendDirectMessageBodyBodyMax),
+});
+
+/**
+ * @summary Mark all messages from this user as read
+ */
+export const MarkConversationReadParams = zod.object({
+  userId: zod.coerce.string(),
+});
+
+export const MarkConversationReadResponse = zod.object({
+  marked: zod.number(),
+});

@@ -58,6 +58,40 @@ export interface PresenceSnapshot {
   members: PresenceMember[];
 }
 
+export interface UserProfile {
+  userId: string;
+  username: string;
+  /** @nullable */
+  avatarUrl: string | null;
+}
+
+export interface DirectMessage {
+  id: number;
+  senderId: string;
+  recipientId: string;
+  senderUsername: string;
+  /** @nullable */
+  senderAvatarUrl: string | null;
+  body: string;
+  /** @nullable */
+  readAt: string | null;
+  createdAt: string;
+}
+
+export interface Conversation {
+  partner: UserProfile;
+  lastMessage: DirectMessage;
+  unreadCount: number;
+}
+
+export interface UnreadCount {
+  total: number;
+}
+
+export interface MarkReadResponse {
+  marked: number;
+}
+
 /**
  * Missing or invalid authentication
  */
@@ -68,10 +102,24 @@ export type UnauthorizedResponse = ErrorResponse;
  */
 export type BadRequestResponse = ErrorResponse;
 
+/**
+ * Resource not found
+ */
+export type NotFoundResponse = ErrorResponse;
+
 export type ListMessagesParams = {
   /**
    * @minimum 1
    * @maximum 200
+   */
+  limit?: number;
+};
+
+export type ListUsersParams = {
+  search?: string;
+  /**
+   * @minimum 1
+   * @maximum 100
    */
   limit?: number;
 };

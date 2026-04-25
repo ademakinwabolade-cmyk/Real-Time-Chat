@@ -4,8 +4,10 @@ import { shadcn } from "@clerk/themes";
 import { Switch, Route, useLocation, Router as WouterRouter } from "wouter";
 import { QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient"; // Assume created or make one
-import { HomeRedirect, Home } from "@/pages/home";
+import { HomeRedirect } from "@/pages/home";
 import { Lounge } from "@/pages/lounge";
+import { Conversations } from "@/pages/conversations";
+import { DmThread } from "@/pages/dm-thread";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
@@ -132,14 +134,14 @@ function ClerkProviderWithRoutes() {
       localization={{
         signIn: {
           start: {
-            title: "Welcome back",
-            subtitle: "Sign in to access the lounge",
+            title: "Welcome back to Kiz Chat",
+            subtitle: "Sign in to join the lounge and your DMs",
           },
         },
         signUp: {
           start: {
-            title: "Join Chatroom",
-            subtitle: "Create an account to jump in",
+            title: "Join Kiz Chat",
+            subtitle: "Create an account to start chatting",
           },
         },
       }}
@@ -152,6 +154,8 @@ function ClerkProviderWithRoutes() {
         <Route path="/sign-in/*?" component={SignInPage} />
         <Route path="/sign-up/*?" component={SignUpPage} />
         <Route path="/lounge" component={Lounge} />
+        <Route path="/dms" component={Conversations} />
+        <Route path="/dms/:userId" component={DmThread} />
         <Route component={NotFound} />
       </Switch>
     </ClerkProvider>

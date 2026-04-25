@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, useMemo } from "react";
-import { Redirect, useLocation } from "wouter";
-import { Show, useClerk, useUser } from "@clerk/react";
-import { format, isSameDay, formatDistanceToNow } from "date-fns";
+import { Link } from "wouter";
+import { useUser } from "@clerk/react";
+import { format, isSameDay } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Users, Activity, LogOut, MessageSquare, ChevronDown } from "lucide-react";
+import { Send, Users, Activity, MessageSquare, ChevronDown } from "lucide-react";
+import { AppShell } from "@/components/app-shell";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,10 +15,11 @@ import {
   useCreateMessage,
   useGetChatStats,
   useGetPresence,
-  getListMessagesQueryKey
+  getListMessagesQueryKey,
+  getGetChatStatsQueryKey,
+  getGetPresenceQueryKey,
 } from "@workspace/api-client-react";
-import { useChatSocket } from "@/hooks/use-chat-socket";
-import type { Message } from "@workspace/api-zod/src/generated/types";
+import type { Message } from "@workspace/api-client-react";
 
 function MessageGroup({ messages, currentUserId }: { messages: Message[], currentUserId?: string }) {
   if (messages.length === 0) return null;
@@ -65,15 +67,10 @@ function MessageGroup({ messages, currentUserId }: { messages: Message[], curren
   );
 }
 
-export function Lounge() {
+function LoungeContent() {
   const { user } = useUser();
-  const { signOut } = useClerk();
-  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const scrollRef = useRef<HTMLDivElement>(null);
-  
-  // Connect to socket
-  useChatSocket();
 
   // Queries
   const { data: messages = [], isLoading: loadingMessages } = useListMessages(undefined, { 
@@ -81,11 +78,11 @@ export function Lounge() {
   });
   
   const { data: stats } = useGetChatStats({
-    query: { refetchInterval: 30000 } // Refetch every 30s as fallback
+    query: { queryKey: getGetChatStatsQueryKey(), refetchInterval: 30000 },
   });
-  
+
   const { data: presence } = useGetPresence({
-    query: { refetchInterval: 10000 } // Poll every 10s
+    query: { queryKey: getGetPresenceQueryKey(), refetchInterval: 10000 },
   });
 
   const createMessage = useCreateMessage();
@@ -183,13 +180,8 @@ export function Lounge() {
     }
   };
 
-  const handleSignOut = async () => {
-    await signOut();
-    setLocation("/");
-  };
-
   return (
-    <div className="flex h-[100dvh] bg-background text-foreground overflow-hidden">
+    <div className="flex h-full bg-background text-foreground overflow-hidden">
       {/* Sidebar - Stats & Presence */}
       <aside className="w-72 border-r border-sidebar-border bg-sidebar hidden md:flex flex-col">
         <div className="h-16 flex items-center px-6 border-b border-sidebar-border shrink-0">
@@ -217,20 +209,37 @@ export function Lounge() {
                   {presence?.onlineCount || 0}
                 </span>
               </div>
-              <div className="space-y-2">
-                {presence?.members.map(member => (
-                  <div key={member.userId} className="flex items-center gap-2">
-                    <Avatar className="w-6 h-6 border border-background">
-                      <AvatarImage src={member.avatarUrl || undefined} />
-                      <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
-                        {member.username.substring(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm truncate text-sidebar-foreground/90 font-medium">
-                      {member.username} {member.userId === user?.id && <span className="text-muted-foreground font-normal">(you)</span>}
-                    </span>
-                  </div>
-                ))}
+              <div className="space-y-1">
+                {presence?.members.map(member => {
+                  const isMe = member.userId === user?.id;
+                  const row = (
+                    <div className="flex items-center gap-2 group">
+                      <Avatar className="w-6 h-6 border border-background">
+                        <AvatarImage src={member.avatarUrl || undefined} />
+                        <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                          {member.username.substring(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-sm truncate text-sidebar-foreground/90 font-medium flex-1">
+                        {member.username} {isMe && <span className="text-muted-foreground font-normal">(you)</span>}
+                      </span>
+                    </div>
+                  );
+                  if (isMe) {
+                    return (
+                      <div key={member.userId} className="px-2 py-1 rounded-md">
+                        {row}
+                      </div>
+                    );
+                  }
+                  return (
+                    <Link key={member.userId} href={`/dms/${member.userId}`}>
+                      <button className="w-full text-left px-2 py-1 rounded-md hover:bg-sidebar-accent transition-colors" title={`Message ${member.username}`}>
+                        {row}
+                      </button>
+                    </Link>
+                  );
+                })}
               </div>
             </div>
 
@@ -279,22 +288,17 @@ export function Lounge() {
         </ScrollArea>
 
         <div className="p-4 border-t border-sidebar-border mt-auto">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 overflow-hidden">
-              <Avatar className="w-8 h-8 border border-border">
-                <AvatarImage src={user?.imageUrl} />
-                <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                  {user?.firstName?.substring(0, 1)}{user?.lastName?.substring(0, 1)}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex flex-col overflow-hidden">
-                <span className="text-sm font-semibold truncate leading-none">{user?.fullName || user?.username}</span>
-                <span className="text-[11px] text-muted-foreground truncate">{user?.primaryEmailAddress?.emailAddress}</span>
-              </div>
+          <div className="flex items-center gap-2 overflow-hidden">
+            <Avatar className="w-8 h-8 border border-border">
+              <AvatarImage src={user?.imageUrl} />
+              <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                {user?.firstName?.substring(0, 1)}{user?.lastName?.substring(0, 1)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col overflow-hidden">
+              <span className="text-sm font-semibold truncate leading-none">{user?.fullName || user?.username}</span>
+              <span className="text-[11px] text-muted-foreground truncate">{user?.primaryEmailAddress?.emailAddress}</span>
             </div>
-            <Button variant="ghost" size="icon" className="shrink-0 h-8 w-8 text-muted-foreground hover:text-foreground" onClick={handleSignOut} title="Sign out">
-              <LogOut size={16} />
-            </Button>
           </div>
         </div>
       </aside>
@@ -308,18 +312,13 @@ export function Lounge() {
             </div>
             <span className="font-serif font-bold text-lg">Lounge</span>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs bg-accent px-2 py-1 rounded-full text-accent-foreground font-medium flex items-center gap-1">
-              <span className="relative flex h-1.5 w-1.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
-              </span>
-              {presence?.onlineCount || 0}
+          <span className="text-xs bg-accent px-2 py-1 rounded-full text-accent-foreground font-medium flex items-center gap-1">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
             </span>
-             <Button variant="ghost" size="icon" onClick={handleSignOut}>
-              <LogOut size={18} />
-            </Button>
-          </div>
+            {presence?.onlineCount || 0}
+          </span>
         </header>
 
         <ScrollArea 
@@ -417,11 +416,19 @@ export function Lounge() {
           </div>
           <div className="max-w-4xl mx-auto mt-2 text-center">
             <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
-              <strong>Enter</strong> to send • <strong>Shift+Enter</strong> for newline
+              <strong>Enter</strong> to send · <strong>Shift+Enter</strong> for newline
             </span>
           </div>
         </div>
       </main>
     </div>
+  );
+}
+
+export function Lounge() {
+  return (
+    <AppShell active="lounge">
+      <LoungeContent />
+    </AppShell>
   );
 }

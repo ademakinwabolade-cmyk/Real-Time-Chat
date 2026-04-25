@@ -1,6 +1,6 @@
 kind = "web"
 previewPath = "/"
-title = "Chatroom"
+title = "Kiz Chat"
 version = "1.0.0"
 id = "artifacts/chatroom"
 router = "path"
