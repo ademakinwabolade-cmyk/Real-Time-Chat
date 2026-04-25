@@ -1,7 +1,7 @@
 import { ReactNode, useEffect, useRef } from "react";
 import { Link, useLocation, Redirect } from "wouter";
 import { Show, useAuth, useClerk, useUser } from "@clerk/react";
-import { MessageSquare, Inbox, LogOut } from "lucide-react";
+import { MessageSquare, Inbox, Sparkles, LogOut } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -45,7 +45,7 @@ function NavItem({ href, icon, label, active, badge }: NavItemProps) {
 
 interface AppShellProps {
   children: ReactNode;
-  active: "lounge" | "dms";
+  active: "lounge" | "dms" | "status";
 }
 
 export function AppShell({ children, active }: AppShellProps) {
@@ -110,6 +110,12 @@ export function AppShell({ children, active }: AppShellProps) {
                 label="Direct messages"
                 active={active === "dms"}
                 badge={unread?.total ?? 0}
+              />
+              <NavItem
+                href="/status"
+                icon={<Sparkles size={20} />}
+                label="Status"
+                active={active === "status"}
               />
             </div>
             <div className="mt-auto flex flex-col items-center gap-2">

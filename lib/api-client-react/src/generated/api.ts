@@ -21,6 +21,7 @@ import type {
   ChatStats,
   Conversation,
   CreateMessageInput,
+  CreateStatusInput,
   DirectMessage,
   HealthStatus,
   ListMessagesParams,
@@ -30,6 +31,8 @@ import type {
   Message,
   NotFoundResponse,
   PresenceSnapshot,
+  SendVoiceMessageInput,
+  Status,
   UnauthorizedResponse,
   UnreadCount,
   UserProfile,
@@ -972,6 +975,262 @@ export const useSendDirectMessage = <
   TContext
 > => {
   return useMutation(getSendDirectMessageMutationOptions(options));
+};
+
+/**
+ * @summary Send a voice message to a specific user
+ */
+export const getSendVoiceMessageUrl = (userId: string) => {
+  return `/api/dms/${userId}/voice`;
+};
+
+export const sendVoiceMessage = async (
+  userId: string,
+  sendVoiceMessageInput: SendVoiceMessageInput,
+  options?: RequestInit,
+): Promise<DirectMessage> => {
+  return customFetch<DirectMessage>(getSendVoiceMessageUrl(userId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(sendVoiceMessageInput),
+  });
+};
+
+export const getSendVoiceMessageMutationOptions = <
+  TError = ErrorType<
+    BadRequestResponse | UnauthorizedResponse | NotFoundResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof sendVoiceMessage>>,
+    TError,
+    { userId: string; data: BodyType<SendVoiceMessageInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof sendVoiceMessage>>,
+  TError,
+  { userId: string; data: BodyType<SendVoiceMessageInput> },
+  TContext
+> => {
+  const mutationKey = ["sendVoiceMessage"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof sendVoiceMessage>>,
+    { userId: string; data: BodyType<SendVoiceMessageInput> }
+  > = (props) => {
+    const { userId, data } = props ?? {};
+
+    return sendVoiceMessage(userId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SendVoiceMessageMutationResult = NonNullable<
+  Awaited<ReturnType<typeof sendVoiceMessage>>
+>;
+export type SendVoiceMessageMutationBody = BodyType<SendVoiceMessageInput>;
+export type SendVoiceMessageMutationError = ErrorType<
+  BadRequestResponse | UnauthorizedResponse | NotFoundResponse
+>;
+
+/**
+ * @summary Send a voice message to a specific user
+ */
+export const useSendVoiceMessage = <
+  TError = ErrorType<
+    BadRequestResponse | UnauthorizedResponse | NotFoundResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof sendVoiceMessage>>,
+    TError,
+    { userId: string; data: BodyType<SendVoiceMessageInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof sendVoiceMessage>>,
+  TError,
+  { userId: string; data: BodyType<SendVoiceMessageInput> },
+  TContext
+> => {
+  return useMutation(getSendVoiceMessageMutationOptions(options));
+};
+
+/**
+ * @summary List active statuses (not expired)
+ */
+export const getListStatusesUrl = () => {
+  return `/api/statuses`;
+};
+
+export const listStatuses = async (
+  options?: RequestInit,
+): Promise<Status[]> => {
+  return customFetch<Status[]>(getListStatusesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListStatusesQueryKey = () => {
+  return [`/api/statuses`] as const;
+};
+
+export const getListStatusesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listStatuses>>,
+  TError = ErrorType<UnauthorizedResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listStatuses>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListStatusesQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listStatuses>>> = ({
+    signal,
+  }) => listStatuses({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listStatuses>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListStatusesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listStatuses>>
+>;
+export type ListStatusesQueryError = ErrorType<UnauthorizedResponse>;
+
+/**
+ * @summary List active statuses (not expired)
+ */
+
+export function useListStatuses<
+  TData = Awaited<ReturnType<typeof listStatuses>>,
+  TError = ErrorType<UnauthorizedResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listStatuses>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListStatusesQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Post a new status (expires in 24h)
+ */
+export const getCreateStatusUrl = () => {
+  return `/api/statuses`;
+};
+
+export const createStatus = async (
+  createStatusInput: CreateStatusInput,
+  options?: RequestInit,
+): Promise<Status> => {
+  return customFetch<Status>(getCreateStatusUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createStatusInput),
+  });
+};
+
+export const getCreateStatusMutationOptions = <
+  TError = ErrorType<BadRequestResponse | UnauthorizedResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createStatus>>,
+    TError,
+    { data: BodyType<CreateStatusInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createStatus>>,
+  TError,
+  { data: BodyType<CreateStatusInput> },
+  TContext
+> => {
+  const mutationKey = ["createStatus"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createStatus>>,
+    { data: BodyType<CreateStatusInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createStatus(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateStatusMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createStatus>>
+>;
+export type CreateStatusMutationBody = BodyType<CreateStatusInput>;
+export type CreateStatusMutationError = ErrorType<
+  BadRequestResponse | UnauthorizedResponse
+>;
+
+/**
+ * @summary Post a new status (expires in 24h)
+ */
+export const useCreateStatus = <
+  TError = ErrorType<BadRequestResponse | UnauthorizedResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createStatus>>,
+    TError,
+    { data: BodyType<CreateStatusInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createStatus>>,
+  TError,
+  { data: BodyType<CreateStatusInput> },
+  TContext
+> => {
+  return useMutation(getCreateStatusMutationOptions(options));
 };
 
 /**

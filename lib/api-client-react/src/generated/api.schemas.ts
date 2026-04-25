@@ -74,8 +74,49 @@ export interface DirectMessage {
   senderAvatarUrl: string | null;
   body: string;
   /** @nullable */
+  voiceAudioId: number | null;
+  /** @nullable */
+  voiceDurationMs: number | null;
+  /** @nullable */
   readAt: string | null;
   createdAt: string;
+}
+
+export interface SendVoiceMessageInput {
+  /**
+   * @minLength 1
+   * @maxLength 10000000
+   */
+  audioBase64: string;
+  /**
+   * @minLength 1
+   * @maxLength 100
+   */
+  mimeType: string;
+  /**
+   * @minimum 1
+   * @maximum 600000
+   */
+  durationMs: number;
+}
+
+export interface Status {
+  id: number;
+  userId: string;
+  username: string;
+  /** @nullable */
+  avatarUrl: string | null;
+  body: string;
+  createdAt: string;
+  expiresAt: string;
+}
+
+export interface CreateStatusInput {
+  /**
+   * @minLength 1
+   * @maxLength 280
+   */
+  body: string;
 }
 
 export interface Conversation {

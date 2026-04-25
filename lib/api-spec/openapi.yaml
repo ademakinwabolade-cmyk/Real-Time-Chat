@@ -247,6 +247,73 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
+  /dms/{userId}/voice:
+    post:
+      operationId: sendVoiceMessage
+      tags: [dms]
+      summary: Send a voice message to a specific user
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendVoiceMessageInput"
+      responses:
+        "201":
+          description: Voice message sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DirectMessage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /statuses:
+    get:
+      operationId: listStatuses
+      tags: [statuses]
+      summary: List active statuses (not expired)
+      responses:
+        "200":
+          description: List of active statuses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Status"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      operationId: createStatus
+      tags: [statuses]
+      summary: Post a new status (expires in 24h)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateStatusInput"
+      responses:
+        "201":
+          description: Status posted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Status"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
   /me/login:
     post:
       operationId: recordLogin
@@ -464,6 +531,10 @@ components:
           type: ["string", "null"]
         body:
           type: string
+        voiceAudioId:
+          type: ["integer", "null"]
+        voiceDurationMs:
+          type: ["integer", "null"]
         readAt:
           type: ["string", "null"]
           format: date-time
@@ -477,8 +548,65 @@ components:
         - senderUsername
         - senderAvatarUrl
         - body
+        - voiceAudioId
+        - voiceDurationMs
         - readAt
         - createdAt
+    SendVoiceMessageInput:
+      type: object
+      properties:
+        audioBase64:
+          type: string
+          minLength: 1
+          maxLength: 10000000
+        mimeType:
+          type: string
+          minLength: 1
+          maxLength: 100
+        durationMs:
+          type: integer
+          minimum: 1
+          maximum: 600000
+      required:
+        - audioBase64
+        - mimeType
+        - durationMs
+    Status:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: string
+        username:
+          type: string
+        avatarUrl:
+          type: ["string", "null"]
+        body:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - username
+        - avatarUrl
+        - body
+        - createdAt
+        - expiresAt
+    CreateStatusInput:
+      type: object
+      properties:
+        body:
+          type: string
+          minLength: 1
+          maxLength: 280
+      required:
+        - body
     Conversation:
       type: object
       properties:

@@ -1,4 +1,11 @@
-import { pgTable, text, serial, timestamp, index } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  serial,
+  integer,
+  timestamp,
+  index,
+} from "drizzle-orm/pg-core";
 
 export function conversationKeyFor(a: string, b: string): string {
   return [a, b].sort().join(":");
@@ -14,6 +21,8 @@ export const directMessagesTable = pgTable(
     senderUsername: text("sender_username").notNull(),
     senderAvatarUrl: text("sender_avatar_url"),
     body: text("body").notNull(),
+    voiceAudioId: integer("voice_audio_id"),
+    voiceDurationMs: integer("voice_duration_ms"),
     readAt: timestamp("read_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()

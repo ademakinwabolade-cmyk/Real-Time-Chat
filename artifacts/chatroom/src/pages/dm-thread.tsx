@@ -22,12 +22,15 @@ import {
   useGetUserProfile,
   useListDirectMessages,
   useSendDirectMessage,
+  useSendVoiceMessage,
   useMarkConversationRead,
   getListDirectMessagesQueryKey,
   getListConversationsQueryKey,
   getGetUnreadDmCountQueryKey,
 } from "@workspace/api-client-react";
 import type { DirectMessage } from "@workspace/api-client-react";
+import { VoiceRecorder } from "@/components/voice-recorder";
+import { VoicePlayer } from "@/components/voice-player";
 
 function initials(name: string): string {
   return name.substring(0, 2).toUpperCase();
@@ -57,7 +60,17 @@ function Bubble({ message, isMine, showTail }: BubbleProps) {
               }`
         }`}
       >
-        <span className="whitespace-pre-wrap break-words">{message.body}</span>
+        {message.voiceAudioId != null ? (
+          <VoicePlayer
+            audioId={message.voiceAudioId}
+            durationMs={message.voiceDurationMs ?? 0}
+            isMine={isMine}
+          />
+        ) : (
+          <span className="whitespace-pre-wrap break-words">
+            {message.body}
+          </span>
+        )}
       </div>
       <div className="flex items-center gap-1 mt-1 px-1">
         <span className="text-[10px] text-muted-foreground font-medium">
@@ -91,6 +104,7 @@ function DmContent({ partnerId }: { partnerId: string }) {
       query: { queryKey: getListDirectMessagesQueryKey(partnerId) },
     });
   const sendDm = useSendDirectMessage();
+  const sendVoice = useSendVoiceMessage();
   const markRead = useMarkConversationRead();
 
   const groups = useMemo(() => {
@@ -184,6 +198,23 @@ function DmContent({ partnerId }: { partnerId: string }) {
         variant: "destructive",
       });
       setDraft(text);
+    }
+  };
+
+  const handleSendVoice = async (params: {
+    audioBase64: string;
+    mimeType: string;
+    durationMs: number;
+  }) => {
+    try {
+      await sendVoice.mutateAsync({ userId: partnerId, data: params });
+      scrollToBottom(true);
+    } catch {
+      toast({
+        title: "Failed to send voice message",
+        description: "Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -315,38 +346,44 @@ function DmContent({ partnerId }: { partnerId: string }) {
       </AnimatePresence>
 
       <div className="p-4 md:p-6 bg-background/80 backdrop-blur-md border-t border-border shrink-0">
-        <div className="max-w-4xl mx-auto relative bg-card border border-input rounded-2xl shadow-sm focus-within:ring-2 focus-within:ring-ring focus-within:border-ring transition-all">
-          <Textarea
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={handleKey}
-            placeholder={
-              partner ? `Message ${partner.username}...` : "Message..."
-            }
-            className="min-h-[60px] max-h-[200px] w-full resize-none border-0 shadow-none focus-visible:ring-0 py-4 px-4 pr-14 bg-transparent text-[15px]"
-            rows={1}
-          />
-          <Button
-            size="icon"
-            onClick={handleSend}
-            disabled={!draft.trim() || sendDm.isPending}
-            className="absolute right-2 bottom-2 h-8 w-8 rounded-xl transition-transform active:scale-95"
-            title="Send"
-          >
-            <Send
-              size={14}
-              className={sendDm.isPending ? "opacity-0" : "opacity-100"}
+        <div className="max-w-4xl mx-auto flex items-end gap-2">
+          <div className="flex-1 relative bg-card border border-input rounded-2xl shadow-sm focus-within:ring-2 focus-within:ring-ring focus-within:border-ring transition-all">
+            <Textarea
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={handleKey}
+              placeholder={
+                partner ? `Message ${partner.username}...` : "Message..."
+              }
+              className="min-h-[60px] max-h-[200px] w-full resize-none border-0 shadow-none focus-visible:ring-0 py-4 px-4 pr-14 bg-transparent text-[15px]"
+              rows={1}
             />
-            {sendDm.isPending && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-3 h-3 border-2 border-background border-t-transparent rounded-full animate-spin" />
-              </div>
-            )}
-          </Button>
+            <Button
+              size="icon"
+              onClick={handleSend}
+              disabled={!draft.trim() || sendDm.isPending}
+              className="absolute right-2 bottom-2 h-8 w-8 rounded-xl transition-transform active:scale-95"
+              title="Send"
+            >
+              <Send
+                size={14}
+                className={sendDm.isPending ? "opacity-0" : "opacity-100"}
+              />
+              {sendDm.isPending && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-3 h-3 border-2 border-background border-t-transparent rounded-full animate-spin" />
+                </div>
+              )}
+            </Button>
+          </div>
+          <VoiceRecorder
+            onSend={handleSendVoice}
+            disabled={sendVoice.isPending}
+          />
         </div>
         <div className="max-w-4xl mx-auto mt-2 text-center">
           <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
-            <strong>Enter</strong> to send · <strong>Shift+Enter</strong> for newline
+            <strong>Enter</strong> to send · <strong>Shift+Enter</strong> for newline · Tap mic to record
           </span>
         </div>
       </div>

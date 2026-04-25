@@ -41,6 +41,8 @@ export function broadcastDirectMessage(message: DirectMessage): void {
     senderUsername: message.senderUsername,
     senderAvatarUrl: message.senderAvatarUrl,
     body: message.body,
+    voiceAudioId: message.voiceAudioId,
+    voiceDurationMs: message.voiceDurationMs,
     readAt: message.readAt ? message.readAt.toISOString() : null,
     createdAt: message.createdAt.toISOString(),
   };

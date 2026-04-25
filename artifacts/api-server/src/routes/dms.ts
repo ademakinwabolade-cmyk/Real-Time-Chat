@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import {
   db,
   directMessagesTable,
+  voiceAudioTable,
   conversationKeyFor,
   type DirectMessage,
 } from "@workspace/db";
@@ -12,6 +13,7 @@ import {
   ListDirectMessagesResponse,
   ListDirectMessagesResponseItem,
   SendDirectMessageBody,
+  SendVoiceMessageBody,
   MarkConversationReadResponse,
 } from "@workspace/api-zod";
 import { requireAuth } from "../middlewares/requireAuth";
@@ -28,6 +30,8 @@ function serialize(row: DirectMessage) {
     senderUsername: row.senderUsername,
     senderAvatarUrl: row.senderAvatarUrl,
     body: row.body,
+    voiceAudioId: row.voiceAudioId,
+    voiceDurationMs: row.voiceDurationMs,
     readAt: row.readAt ? row.readAt.toISOString() : null,
     createdAt: row.createdAt.toISOString(),
   };
@@ -44,13 +48,17 @@ router.get("/dms", requireAuth, async (req, res): Promise<void> => {
     sender_username: string;
     sender_avatar_url: string | null;
     body: string;
+    voice_audio_id: number | null;
+    voice_duration_ms: number | null;
     read_at: Date | null;
     created_at: Date;
     unread_count: number;
   }>(sql`
     SELECT DISTINCT ON (conversation_key)
       id, conversation_key, sender_id, recipient_id,
-      sender_username, sender_avatar_url, body, read_at, created_at,
+      sender_username, sender_avatar_url, body,
+      voice_audio_id, voice_duration_ms,
+      read_at, created_at,
       (
         SELECT COUNT(*)::int FROM direct_messages dm2
         WHERE dm2.conversation_key = direct_messages.conversation_key
@@ -103,6 +111,8 @@ router.get("/dms", requireAuth, async (req, res): Promise<void> => {
         senderUsername: r.sender_username,
         senderAvatarUrl: r.sender_avatar_url,
         body: r.body,
+        voiceAudioId: r.voice_audio_id,
+        voiceDurationMs: r.voice_duration_ms,
         readAt: r.read_at ? r.read_at.toISOString() : null,
         createdAt: r.created_at.toISOString(),
       },
@@ -201,6 +211,88 @@ router.post("/dms/:userId", requireAuth, async (req, res): Promise<void> => {
   broadcastDirectMessage(row);
   res.status(201).json(ListDirectMessagesResponseItem.parse(serialize(row)));
 });
+
+router.post(
+  "/dms/:userId/voice",
+  requireAuth,
+  async (req, res): Promise<void> => {
+    const me = req.userId!;
+    const otherId = String(req.params["userId"] ?? "");
+    if (!otherId || otherId === me) {
+      res.status(400).json({ error: "Invalid recipient" });
+      return;
+    }
+
+    const parsed = SendVoiceMessageBody.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.message });
+      return;
+    }
+
+    let buffer: Buffer;
+    try {
+      buffer = Buffer.from(parsed.data.audioBase64, "base64");
+    } catch {
+      res.status(400).json({ error: "Invalid base64 audio data" });
+      return;
+    }
+    if (buffer.length === 0 || buffer.length > 8 * 1024 * 1024) {
+      res.status(400).json({ error: "Audio must be 1 byte to 8 MB" });
+      return;
+    }
+
+    let summary;
+    try {
+      summary = await getUserSummary(me);
+    } catch {
+      res.status(404).json({ error: "Sender not found" });
+      return;
+    }
+
+    try {
+      await getUserSummary(otherId);
+    } catch {
+      res.status(404).json({ error: "Recipient not found" });
+      return;
+    }
+
+    const [audio] = await db
+      .insert(voiceAudioTable)
+      .values({
+        mimeType: parsed.data.mimeType,
+        durationMs: parsed.data.durationMs,
+        data: buffer,
+      })
+      .returning({ id: voiceAudioTable.id });
+
+    if (!audio) {
+      res.status(500).json({ error: "Failed to store audio" });
+      return;
+    }
+
+    const [row] = await db
+      .insert(directMessagesTable)
+      .values({
+        conversationKey: conversationKeyFor(me, otherId),
+        senderId: me,
+        recipientId: otherId,
+        senderUsername: summary.username,
+        senderAvatarUrl: summary.avatarUrl,
+        body: "",
+        voiceAudioId: audio.id,
+        voiceDurationMs: parsed.data.durationMs,
+      })
+      .returning();
+
+    if (!row) {
+      res.status(500).json({ error: "Failed to create message" });
+      return;
+    }
+
+    broadcastDirectMessage(row);
+    res.status(201).json(ListDirectMessagesResponseItem.parse(serialize(row)));
+  },
+);
 
 router.post(
   "/dms/:userId/read",

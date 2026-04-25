@@ -8,6 +8,7 @@ import { HomeRedirect } from "@/pages/home";
 import { Lounge } from "@/pages/lounge";
 import { Conversations } from "@/pages/conversations";
 import { DmThread } from "@/pages/dm-thread";
+import { Status } from "@/pages/status";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
@@ -156,6 +157,7 @@ function ClerkProviderWithRoutes() {
         <Route path="/lounge" component={Lounge} />
         <Route path="/dms" component={Conversations} />
         <Route path="/dms/:userId" component={DmThread} />
+        <Route path="/status" component={Status} />
         <Route component={NotFound} />
       </Switch>
     </ClerkProvider>

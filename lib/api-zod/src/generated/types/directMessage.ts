@@ -15,6 +15,10 @@ export interface DirectMessage {
   senderAvatarUrl: string | null;
   body: string;
   /** @nullable */
+  voiceAudioId: number | null;
+  /** @nullable */
+  voiceDurationMs: number | null;
+  /** @nullable */
   readAt: Date | null;
   createdAt: Date;
 }

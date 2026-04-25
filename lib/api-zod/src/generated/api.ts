@@ -136,6 +136,8 @@ export const ListConversationsResponseItem = zod.object({
     senderUsername: zod.string(),
     senderAvatarUrl: zod.string().nullable(),
     body: zod.string(),
+    voiceAudioId: zod.number().nullable(),
+    voiceDurationMs: zod.number().nullable(),
     readAt: zod.coerce.date().nullable(),
     createdAt: zod.coerce.date(),
   }),
@@ -166,6 +168,8 @@ export const ListDirectMessagesResponseItem = zod.object({
   senderUsername: zod.string(),
   senderAvatarUrl: zod.string().nullable(),
   body: zod.string(),
+  voiceAudioId: zod.number().nullable(),
+  voiceDurationMs: zod.number().nullable(),
   readAt: zod.coerce.date().nullable(),
   createdAt: zod.coerce.date(),
 });
@@ -184,6 +188,48 @@ export const sendDirectMessageBodyBodyMax = 2000;
 
 export const SendDirectMessageBody = zod.object({
   body: zod.string().min(1).max(sendDirectMessageBodyBodyMax),
+});
+
+/**
+ * @summary Send a voice message to a specific user
+ */
+export const SendVoiceMessageParams = zod.object({
+  userId: zod.coerce.string(),
+});
+
+export const sendVoiceMessageBodyAudioBase64Max = 10000000;
+
+export const sendVoiceMessageBodyMimeTypeMax = 100;
+
+export const sendVoiceMessageBodyDurationMsMax = 600000;
+
+export const SendVoiceMessageBody = zod.object({
+  audioBase64: zod.string().min(1).max(sendVoiceMessageBodyAudioBase64Max),
+  mimeType: zod.string().min(1).max(sendVoiceMessageBodyMimeTypeMax),
+  durationMs: zod.number().min(1).max(sendVoiceMessageBodyDurationMsMax),
+});
+
+/**
+ * @summary List active statuses (not expired)
+ */
+export const ListStatusesResponseItem = zod.object({
+  id: zod.number(),
+  userId: zod.string(),
+  username: zod.string(),
+  avatarUrl: zod.string().nullable(),
+  body: zod.string(),
+  createdAt: zod.coerce.date(),
+  expiresAt: zod.coerce.date(),
+});
+export const ListStatusesResponse = zod.array(ListStatusesResponseItem);
+
+/**
+ * @summary Post a new status (expires in 24h)
+ */
+export const createStatusBodyBodyMax = 280;
+
+export const CreateStatusBody = zod.object({
+  body: zod.string().min(1).max(createStatusBodyBodyMax),
 });
 
 /**
